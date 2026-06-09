@@ -1,31 +1,28 @@
-name: Chinese Character Every 5 Minutes
+name: Autopost Chinese Character
 
 on:
-  schedule:
-    - cron: '*/5 * * * *'  # каждые 5 минут
   workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *"
 
 jobs:
   post:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4       # ← изменено
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5   # ← изменено
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install google-genai requests
+      - name: Install deps
+        run: pip install requests google-genai
 
       - name: Run script
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TG_CHANNEL_ID: ${{ secrets.TG_CHANNEL_ID }}
-          GOOGLE_GENAI_USE_VERTEXAI: false
-        run: |
-          python telegram_gemini_autopost.py
+        run: python main.py
