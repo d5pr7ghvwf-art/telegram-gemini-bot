@@ -8,7 +8,7 @@ GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
 TG_CHANNEL_ID = os.environ["TG_CHANNEL_ID"]
 
 BASE_PROMPT = "Какой сегодня день месяца? Сегодня {} число."
-MODEL = "gemini-2.0-flash-lite"
+MODEL = "gemini-3.5-flash"
 
 def get_gemini_response(day_number: int) -> str:
     client = genai.Client(api_key=GEMINI_API_KEY)
