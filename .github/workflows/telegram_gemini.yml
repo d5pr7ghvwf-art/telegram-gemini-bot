@@ -25,4 +25,4 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TG_CHANNEL_ID: ${{ secrets.TG_CHANNEL_ID }}
-        run: python main.py
+        run: python telegram_gemini_autopost.py
