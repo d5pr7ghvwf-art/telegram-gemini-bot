@@ -2,8 +2,6 @@ import os
 from datetime import datetime
 import requests
 from google import genai
-import csv
-from io import StringIO
 
 # Константы
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
@@ -12,62 +10,115 @@ TG_CHANNEL_ID = os.environ["TG_CHANNEL_ID"]
 
 MODEL = "gemini-3.5-flash"
 
-# URL с полным списком иероглифов по частотности (9000+ иероглифов)
-HANZIDB_URL = "https://raw.githubusercontent.com/ruddfawcett/hanziDB.csv/master/hanziDB.csv"
+# ТОП-100 ЧАСТОТНЫХ ИЕРОГЛИФОВ (из надёжного источника)
+CHARACTERS = [
+    {"rank": 1, "char": "的", "pinyin": "de", "meaning": "притяжательная частица"},
+    {"rank": 2, "char": "一", "pinyin": "yī", "meaning": "один"},
+    {"rank": 3, "char": "是", "pinyin": "shì", "meaning": "быть, являться"},
+    {"rank": 4, "char": "不", "pinyin": "bù", "meaning": "нет, не"},
+    {"rank": 5, "char": "了", "pinyin": "le", "meaning": "показатель завершения действия"},
+    {"rank": 6, "char": "我", "pinyin": "wǒ", "meaning": "я"},
+    {"rank": 7, "char": "你", "pinyin": "nǐ", "meaning": "ты, вы"},
+    {"rank": 8, "char": "有", "pinyin": "yǒu", "meaning": "иметь, есть"},
+    {"rank": 9, "char": "他", "pinyin": "tā", "meaning": "он"},
+    {"rank": 10, "char": "人", "pinyin": "rén", "meaning": "человек"},
+    {"rank": 11, "char": "在", "pinyin": "zài", "meaning": "находиться, в, на"},
+    {"rank": 12, "char": "这", "pinyin": "zhè", "meaning": "это"},
+    {"rank": 13, "char": "来", "pinyin": "lái", "meaning": "приходить"},
+    {"rank": 14, "char": "去", "pinyin": "qù", "meaning": "уходить, идти"},
+    {"rank": 15, "char": "大", "pinyin": "dà", "meaning": "большой"},
+    {"rank": 16, "char": "小", "pinyin": "xiǎo", "meaning": "маленький"},
+    {"rank": 17, "char": "多", "pinyin": "duō", "meaning": "много"},
+    {"rank": 18, "char": "少", "pinyin": "shǎo", "meaning": "мало"},
+    {"rank": 19, "char": "看", "pinyin": "kàn", "meaning": "смотреть, читать"},
+    {"rank": 20, "char": "说", "pinyin": "shuō", "meaning": "говорить"},
+    {"rank": 21, "char": "吗", "pinyin": "ma", "meaning": "вопросительная частица"},
+    {"rank": 22, "char": "好", "pinyin": "hǎo", "meaning": "хороший"},
+    {"rank": 23, "char": "她", "pinyin": "tā", "meaning": "она"},
+    {"rank": 24, "char": "它", "pinyin": "tā", "meaning": "это (о предмете)"},
+    {"rank": 25, "char": "个", "pinyin": "gè", "meaning": "счётное слово"},
+    {"rank": 26, "char": "中", "pinyin": "zhōng", "meaning": "средний, центр, в"},
+    {"rank": 27, "char": "上", "pinyin": "shàng", "meaning": "верх, на"},
+    {"rank": 28, "char": "下", "pinyin": "xià", "meaning": "низ, под"},
+    {"rank": 29, "char": "年", "pinyin": "nián", "meaning": "год"},
+    {"rank": 30, "char": "月", "pinyin": "yuè", "meaning": "месяц"},
+    {"rank": 31, "char": "日", "pinyin": "rì", "meaning": "день"},
+    {"rank": 32, "char": "时", "pinyin": "shí", "meaning": "час"},
+    {"rank": 33, "char": "分", "pinyin": "fēn", "meaning": "минута"},
+    {"rank": 34, "char": "晚", "pinyin": "wǎn", "meaning": "вечер"},
+    {"rank": 35, "char": "早", "pinyin": "zǎo", "meaning": "утро"},
+    {"rank": 36, "char": "爱", "pinyin": "ài", "meaning": "любить"},
+    {"rank": 37, "char": "吃", "pinyin": "chī", "meaning": "есть"},
+    {"rank": 38, "char": "喝", "pinyin": "hē", "meaning": "пить"},
+    {"rank": 39, "char": "走", "pinyin": "zǒu", "meaning": "ходить"},
+    {"rank": 40, "char": "跑", "pinyin": "pǎo", "meaning": "бежать"},
+    {"rank": 41, "char": "听", "pinyin": "tīng", "meaning": "слушать"},
+    {"rank": 42, "char": "写", "pinyin": "xiě", "meaning": "писать"},
+    {"rank": 43, "char": "读", "pinyin": "dú", "meaning": "читать"},
+    {"rank": 44, "char": "学", "pinyin": "xué", "meaning": "учить"},
+    {"rank": 45, "char": "工", "pinyin": "gōng", "meaning": "работа"},
+    {"rank": 46, "char": "家", "pinyin": "jiā", "meaning": "дом, семья"},
+    {"rank": 47, "char": "国", "pinyin": "guó", "meaning": "страна"},
+    {"rank": 48, "char": "语", "pinyin": "yǔ", "meaning": "язык"},
+    {"rank": 49, "char": "文", "pinyin": "wén", "meaning": "текст, письмо"},
+    {"rank": 50, "char": "书", "pinyin": "shū", "meaning": "книга"},
+    {"rank": 51, "char": "门", "pinyin": "mén", "meaning": "дверь"},
+    {"rank": 52, "char": "口", "pinyin": "kǒu", "meaning": "рот"},
+    {"rank": 53, "char": "手", "pinyin": "shǒu", "meaning": "рука"},
+    {"rank": 54, "char": "足", "pinyin": "zú", "meaning": "нога"},
+    {"rank": 55, "char": "心", "pinyin": "xīn", "meaning": "сердце"},
+    {"rank": 56, "char": "目", "pinyin": "mù", "meaning": "глаз"},
+    {"rank": 57, "char": "耳", "pinyin": "ěr", "meaning": "ухо"},
+    {"rank": 58, "char": "头", "pinyin": "tóu", "meaning": "голова"},
+    {"rank": 59, "char": "面", "pinyin": "miàn", "meaning": "лица, сторона"},
+    {"rank": 60, "char": "名", "pinyin": "míng", "meaning": "имя"},
+    {"rank": 61, "char": "字", "pinyin": "zì", "meaning": "иероглиф, буква"},
+    {"rank": 62, "char": "音", "pinyin": "yīn", "meaning": "звук"},
+    {"rank": 63, "char": "声", "pinyin": "shēng", "meaning": "звук, голос"},
+    {"rank": 64, "char": "问", "pinyin": "wèn", "meaning": "спрашивать"},
+    {"rank": 65, "char": "答", "pinyin": "dá", "meaning": "ответ"},
+    {"rank": 66, "char": "是", "pinyin": "shì", "meaning": "правда, да"},
+    {"rank": 67, "char": "否", "pinyin": "fǒu", "meaning": "нет, неправда"},
+    {"rank": 68, "char": "请", "pinyin": "qǐng", "meaning": "просить"},
+    {"rank": 69, "char": "谢", "pinyin": "xiè", "meaning": "благодарить"},
+    {"rank": 70, "char": "对", "pinyin": "duì", "meaning": "правильный"},
+    {"rank": 71, "char": "错", "pinyin": "cuò", "meaning": "неправильный"},
+    {"rank": 72, "char": "新", "pinyin": "xīn", "meaning": "новый"},
+    {"rank": 73, "char": "旧", "pinyin": "jiù", "meaning": "старый"},
+    {"rank": 74, "char": "长", "pinyin": "cháng", "meaning": "долгий, длинный"},
+    {"rank": 75, "char": "短", "pinyin": "duǎn", "meaning": "короткий"},
+    {"rank": 76, "char": "高", "pinyin": "gāo", "meaning": "высокий"},
+    {"rank": 77, "char": "低", "pinyin": "dī", "meaning": "низкий"},
+    {"rank": 78, "char": "快", "pinyin": "kuài", "meaning": "быстрый"},
+    {"rank": 79, "char": "慢", "pinyin": "màn", "meaning": "медленный"},
+    {"rank": 80, "char": "热", "pinyin": "rè", "meaning": "горячий"},
+    {"rank": 81, "char": "冷", "pinyin": "lěng", "meaning": "холодный"},
+    {"rank": 82, "char": "生", "pinyin": "shēng", "meaning": "жить, рождаться"},
+    {"rank": 83, "char": "死", "pinyin": "sǐ", "meaning": "умереть"},
+    {"rank": 84, "char": "买", "pinyin": "mǎi", "meaning": "покупать"},
+    {"rank": 85, "char": "卖", "pinyin": "mài", "meaning": "продавать"},
+    {"rank": 86, "char": "钱", "pinyin": "qián", "meaning": "деньги"},
+    {"rank": 87, "char": "买", "pinyin": "mǎi", "meaning": "покупать"},
+    {"rank": 88, "char": "车", "pinyin": "chē", "meaning": "машина, транспорт"},
+    {"rank": 89, "char": "车", "pinyin": "chē", "meaning": "транспорт"},
+    {"rank": 90, "char": "路", "pinyin": "lù", "meaning": "дорога"},
+    {"rank": 91, "char": "桥", "pinyin": "qiáo", "meaning": "мост"},
+    {"rank": 92, "char": "河", "pinyin": "hé", "meaning": "река"},
+    {"rank": 93, "char": "海", "pinyin": "hǎi", "meaning": "море"},
+    {"rank": 94, "char": "山", "pinyin": "shān", "meaning": "гора"},
+    {"rank": 95, "char": "水", "pinyin": "shuǐ", "meaning": "вода"},
+    {"rank": 96, "char": "火", "pinyin": "huǒ", "meaning": "огонь"},
+    {"rank": 97, "char": "土", "pinyin": "tǔ", "meaning": "земля"},
+    {"rank": 98, "char": "金", "pinyin": "jīn", "meaning": "золото"},
+    {"rank": 99, "char": "木", "pinyin": "mù", "meaning": "дерево"},
+    {"rank": 100, "char": "风", "pinyin": "fēng", "meaning": "ветер"},
+]
 
-def load_chinese_characters_from_url() -> list:
-    """Загружает список иероглифов из hanziDB.csv (9000+ иероглифов по частотности)"""
-    print("📥 Загрузка списка иероглифов из hanziDB...")
-    
-    try:
-        response = requests.get(HANZIDB_URL, timeout=30)
-        response.raise_for_status()
-        
-        # Парсим CSV
-        csv_data = StringIO(response.text)
-        reader = csv.reader(csv_data)
-        
-        characters = []
-        for row in reader:
-            # hanziDB.csv структура: rank, char, frequency, pinyin, meanings
-            if len(row) >= 5:
-                try:
-                    rank = int(row[0])
-                    char = row[1]
-                    frequency = float(row[2]) if row[2] else 0
-                    pinyin = row[3] if row[3] else ""
-                    meanings = row[4] if row[4] else ""
-                    
-                    characters.append({
-                        "rank": rank,
-                        "char": char,
-                        "frequency": frequency,
-                        "pinyin": pinyin,
-                        "meaning": meanings
-                    })
-                except (ValueError, IndexError):
-                    continue
-        
-        print(f"✅ Загружено {len(characters)} иероглифов")
-        return characters
-    
-    except Exception as e:
-        print(f"❌ Ошибка загрузки: {e}")
-        # Если не удалось загруть — используем минимальный список
-        return [
-            {"rank": 1, "char": "的", "frequency": 0.0, "pinyin": "de", "meaning": "притяжательная частица"},
-            {"rank": 2, "char": "一", "frequency": 0.0, "pinyin": "yī", "meaning": "один"},
-            {"rank": 3, "char": "是", "frequency": 0.0, "pinyin": "shì", "meaning": "быть, являться"},
-            {"rank": 4, "char": "不", "frequency": 0.0, "pinyin": "bù", "meaning": "нет, не"},
-            {"rank": 5, "char": "了", "frequency": 0.0, "pinyin": "le", "meaning": "показатель завершения"},
-        ]
-
-def get_current_char_index(characters: list) -> int:
+def get_current_char_index() -> int:
     """Определяет индекс иероглифа по времени (каждые 5 минут новый)"""
     now = datetime.now()
-    # Учитываем минуты: (час * 60 + минуты) / 5
     total_intervals = (now.hour * 60 + now.minute) // 5
-    return total_intervals % len(characters)
+    return total_intervals % len(CHARACTERS)
 
 def get_structural_analysis(char: str, pinyin: str, meaning: str) -> str:
     """Генерирует структурный разбор по графемам через Gemini"""
@@ -104,12 +155,11 @@ def get_structural_analysis(char: str, pinyin: str, meaning: str) -> str:
     response = client.models.generate_content(model=MODEL, contents=prompt)
     return response.text or ""
 
-def format_telegram_post(char_data: dict, analysis: str) -> str:
+def format_telegram_post(char_ dict, analysis: str) -> str:
     """Формирует красивый пост для Telegram"""
     today = datetime.now().strftime("%d.%m.%Y")
     time_str = datetime.now().strftime("%H:%M")
     rank = char_data['rank']
-    frequency = char_data.get('frequency', 0)
     
     post = f"""
 ╔═══════════════════════════════════════════╗
@@ -117,9 +167,8 @@ def format_telegram_post(char_data: dict, analysis: str) -> str:
 ║          Разбор по частотности            ║
 ╠═══════════════════════════════════════════╣
 
-🔢 Rank #{rank} из 9000+ частотных иероглифов
+🔢 Rank #{rank} из {len(CHARACTERS)} частотных иероглифов
 {char_data['char']} — {char_data['pinyin']} — {char_data['meaning']}
-Частотность: {frequency:.6f}%
 
 ═══════════════════════════════════════════
 
@@ -147,26 +196,18 @@ def send_to_telegram(text: str) -> None:
 
 def main():
     """Главная функция"""
-    # Загружаем список иероглифов
-    characters = load_chinese_characters_from_url()
-    
-    # Получаем текущий индекс
-    char_index = get_current_char_index(characters)
-    char_data = characters[char_index]
+    char_index = get_current_char_index()
+    char_data = CHARACTERS[char_index]
     
     print(f"📖 Разбор иероглифа Rank #{char_data['rank']}: {char_data['char']}")
     
-    # Получаем структурный разбор
     analysis = get_structural_analysis(
         char_data['char'],
         char_data['pinyin'],
         char_data['meaning']
     )
     
-    # Формируем пост
     post = format_telegram_post(char_data, analysis)
-    
-    # Отправляем в Telegram
     send_to_telegram(post)
     
     print("✅ Пост успешно отправлен!")
