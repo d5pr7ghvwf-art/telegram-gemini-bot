@@ -152,7 +152,7 @@ def format_telegram_post(char_data: dict, analysis: str) -> str:
     time_str = datetime.now().strftime("%H:%M")
     rank = char_data['rank']
     
-    analysis = analysis.replace("*", "")
+    analysis = analysis.replace("*", "").replace("#", "")
     
     post = f"""
 ИЕРОГЛИФ #{rank} из 100
