@@ -10,7 +10,7 @@ TG_CHANNEL_ID = os.environ["TG_CHANNEL_ID"]
 
 MODEL = "gemini-3.5-flash"
 
-# ТОП-100 ЧАСТОТНЫХ ИЕРОГЛИФОВ (из надёжного источника)
+# ТОП-100 ЧАСТОТНЫХ ИЕРОГЛИФОВ
 CHARACTERS = [
     {"rank": 1, "char": "的", "pinyin": "de", "meaning": "притяжательная частица"},
     {"rank": 2, "char": "一", "pinyin": "yī", "meaning": "один"},
@@ -98,30 +98,28 @@ CHARACTERS = [
     {"rank": 84, "char": "买", "pinyin": "mǎi", "meaning": "покупать"},
     {"rank": 85, "char": "卖", "pinyin": "mài", "meaning": "продавать"},
     {"rank": 86, "char": "钱", "pinyin": "qián", "meaning": "деньги"},
-    {"rank": 87, "char": "买", "pinyin": "mǎi", "meaning": "покупать"},
-    {"rank": 88, "char": "车", "pinyin": "chē", "meaning": "машина, транспорт"},
-    {"rank": 89, "char": "车", "pinyin": "chē", "meaning": "транспорт"},
-    {"rank": 90, "char": "路", "pinyin": "lù", "meaning": "дорога"},
-    {"rank": 91, "char": "桥", "pinyin": "qiáo", "meaning": "мост"},
-    {"rank": 92, "char": "河", "pinyin": "hé", "meaning": "река"},
-    {"rank": 93, "char": "海", "pinyin": "hǎi", "meaning": "море"},
-    {"rank": 94, "char": "山", "pinyin": "shān", "meaning": "гора"},
-    {"rank": 95, "char": "水", "pinyin": "shuǐ", "meaning": "вода"},
-    {"rank": 96, "char": "火", "pinyin": "huǒ", "meaning": "огонь"},
-    {"rank": 97, "char": "土", "pinyin": "tǔ", "meaning": "земля"},
-    {"rank": 98, "char": "金", "pinyin": "jīn", "meaning": "золото"},
-    {"rank": 99, "char": "木", "pinyin": "mù", "meaning": "дерево"},
-    {"rank": 100, "char": "风", "pinyin": "fēng", "meaning": "ветер"},
+    {"rank": 87, "char": "车", "pinyin": "chē", "meaning": "машина, транспорт"},
+    {"rank": 88, "char": "路", "pinyin": "lù", "meaning": "дорога"},
+    {"rank": 89, "char": "桥", "pinyin": "qiáo", "meaning": "мост"},
+    {"rank": 90, "char": "河", "pinyin": "hé", "meaning": "река"},
+    {"rank": 91, "char": "海", "pinyin": "hǎi", "meaning": "море"},
+    {"rank": 92, "char": "山", "pinyin": "shān", "meaning": "гора"},
+    {"rank": 93, "char": "水", "pinyin": "shuǐ", "meaning": "вода"},
+    {"rank": 94, "char": "火", "pinyin": "huǒ", "meaning": "огонь"},
+    {"rank": 95, "char": "土", "pinyin": "tǔ", "meaning": "земля"},
+    {"rank": 96, "char": "金", "pinyin": "jīn", "meaning": "золото"},
+    {"rank": 97, "char": "木", "pinyin": "mù", "meaning": "дерево"},
+    {"rank": 98, "char": "风", "pinyin": "fēng", "meaning": "ветер"},
+    {"rank": 99, "char": "雨", "pinyin": "yǔ", "meaning": "дождь"},
+    {"rank": 100, "char": "天", "pinyin": "tiān", "meaning": "небо"},
 ]
 
 def get_current_char_index() -> int:
-    """Определяет индекс иероглифа по времени (каждые 5 минут новый)"""
     now = datetime.now()
     total_intervals = (now.hour * 60 + now.minute) // 5
     return total_intervals % len(CHARACTERS)
 
 def get_structural_analysis(char: str, pinyin: str, meaning: str) -> str:
-    """Генерирует структурный разбор по графемам через Gemini"""
     prompt = f"""
 Подробный разбор китайского иероглифа {char} (пиньинь: {pinyin}, значение: {meaning}):
 
@@ -155,8 +153,7 @@ def get_structural_analysis(char: str, pinyin: str, meaning: str) -> str:
     response = client.models.generate_content(model=MODEL, contents=prompt)
     return response.text or ""
 
-def format_telegram_post(char_ dict, analysis: str) -> str:
-    """Формирует красивый пост для Telegram"""
+def format_telegram_post(char_data: dict, analysis: str) -> str:
     today = datetime.now().strftime("%d.%m.%Y")
     time_str = datetime.now().strftime("%H:%M")
     rank = char_data['rank']
@@ -181,7 +178,6 @@ def format_telegram_post(char_ dict, analysis: str) -> str:
     return post.strip()
 
 def send_to_telegram(text: str) -> None:
-    """Отправляет сообщение в Telegram"""
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     response = requests.post(
         url,
@@ -195,7 +191,6 @@ def send_to_telegram(text: str) -> None:
     response.raise_for_status()
 
 def main():
-    """Главная функция"""
     char_index = get_current_char_index()
     char_data = CHARACTERS[char_index]
     
