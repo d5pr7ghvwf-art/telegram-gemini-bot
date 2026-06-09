@@ -8,7 +8,7 @@ TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
 TG_CHANNEL_ID = os.environ["TG_CHANNEL_ID"]
 
-MODEL = "gemini-3.5-flash" 
+MODEL = "gemini-3.1-flash-lite" 
 
 # ТОП-100 ЧАСТОТНЫХ ИЕРОГЛИФОВ
 CHARACTERS = [
