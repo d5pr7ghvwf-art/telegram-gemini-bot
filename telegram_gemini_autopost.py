@@ -104,7 +104,7 @@ def get_structural_analysis(char: str, pinyin: str, meaning: str) -> str:
     response = client.models.generate_content(model=MODEL, contents=prompt)
     return response.text or ""
 
-def format_telegram_post(char_ dict, analysis: str) -> str:
+def format_telegram_post(char_data: dict, analysis: str) -> str:
     """Формирует красивый пост для Telegram"""
     today = datetime.now().strftime("%d.%m.%Y")
     time_str = datetime.now().strftime("%H:%M")
